@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User, Planet, People
+from models import db, User, Planet, People, Favorito
 #from models import Person
 
 app = Flask(__name__)
@@ -36,7 +36,7 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
+@app.route('/users', methods=['GET'])
 def get_user():
     user= User.query.all()
 
@@ -54,7 +54,7 @@ def get_planet():
     return jsonify(all_planets), 200
 
 
-@app.route('/planet/<int:planet_id>', methods=['GET'])
+@app.route('/planet/<planet_id>', methods=['GET'])
 def get_single_planet(id):
     single_planet= Planet.query.all(id)
 
@@ -72,11 +72,74 @@ def get_people():
 
 
 
-@app.route('/people/<int:people_id>', methods=['GET'])
+@app.route('/people/<people_id>', methods=['GET'])
 def get_single_people(id):
     single_person= People.query.all(id)
 
     return jsonify(single_person), 200
+
+
+@app.route('/users/favorito', methods=['GET'])
+def get_favoritos():
+
+    data = request.get_json()
+    favoritos = Favorito.query.all()
+    favoritos_serialized = [favorito.serialize() for favorito in favoritos]
+    return jsonify(favoritos_serialized), 200 
+
+@app.route('/favorito/planet/<planet_id>', methods=['POST'])
+def add_planet_favorito():
+    data = request.get_json()
+    planet_id = data.get("planet_id")
+
+    exist = Favorito.query.filter_by(user_id = data["user_id"], planet_id=planet_id).first()
+    if exist:
+        return jsonify({"error": "El planeta ya está en favoritos"}), 400
+
+    new_favorito = Favorito(
+        planet_id=planet_id,
+        user_id= data["user_id"]
+    )
+    db.session.add(new_favorito)
+    db.session.commit()
+    return jsonify({"msg": "Favorito añadido"}), 201
+
+@app.route('/favorito/planet/<planet_id>', methods=['DELETE'])
+def delete_planet_favorito(planet_id):
+    data = request.get_json()
+    favorito = Favorito.query.filter_by(user_id = data["user_id"], planet_id = planet_id).first()
+    db.session.delete(favorito)
+    db.session.commit()
+    
+    return jsonify({"message": "Favorito eliminado"}), 200
+
+
+
+@app.route('/favorito/people/<people_id>', methods=['POST'])
+def add_people_favorito():
+    data = request.get_json()
+    people_id = data.get("people_id")
+
+    exist = Favorito.query.filter_by(user_id = data["user_id"], people_id=people_id).first()
+    if exist:
+        return jsonify({"error": "El personaje ya está en favoritos"}), 400
+
+    new_favorito = Favorito(
+        people_id=people_id,
+        user_id= data["user_id"]
+    )
+    db.session.add(new_favorito)
+    db.session.commit()
+    return jsonify({"msg": "Favorito añadido"}), 201
+
+@app.route('/favorito/people/<people_id>', methods=['DELETE'])
+def delete_people_favorito(people_id):
+    data = request.get_json()
+    favorito = Favorito.query.filter_by(user_id = data["user_id"], people_id = people_id).first()
+    db.session.delete(favorito)
+    db.session.commit()
+    
+    return jsonify({"message": "Favorito eliminado"}), 200
 
 
 
